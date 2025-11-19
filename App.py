@@ -7,10 +7,7 @@ import seaborn as sns
 
 st.title("Mental Health Stress Level Predictor with Visualizations (Bhutan)")
 
-# -------------------------
-# 1. Load synthetic dataset
-# -------------------------
-@st.cache_data
+@st.cache_resource
 def load_data():
     np.random.seed(42)
     size = 600
@@ -24,12 +21,7 @@ def load_data():
         'mood_score': np.random.randint(1, 10, size)
     })
 
-    # Create a combined stress score (just for demo)
-    score = (
-        data['work_stress'] * 0.5
-        + (10 - data['mood_score'])
-        + (6 - data['physical_activity'])
-    )
+    score = (data['work_stress'] * 0.5) + (10 - data['mood_score']) + (6 - data['physical_activity'])
 
     conditions = [
         (score < 8),
@@ -43,15 +35,12 @@ def load_data():
     return data
 
 
-# -------------------------
-# 2. Train the model
-# -------------------------
 @st.cache_resource
 def train_model(data):
     X = data.drop("stress_level", axis=1)
     y = data["stress_level"]
 
-    model = RandomForestClassifier(random_state=42)
+    model = RandomForestClassifier()
     model.fit(X, y)
 
     return model
@@ -60,30 +49,19 @@ def train_model(data):
 data = load_data()
 model = train_model(data)
 
-# -------------------------
-# 3. Sidebar navigation
-# -------------------------
 menu = st.sidebar.selectbox(
     "Navigate",
     ["Dataset Overview", "Visualizations", "Train Model Summary", "Predict Stress Level"]
 )
 
-# -------------------------
-# 4. Dataset overview
-# -------------------------
 if menu == "Dataset Overview":
     st.header("Dataset Overview")
     st.dataframe(data.head())
-
     st.header("Summary of Data")
     st.dataframe(data.describe())
-
-    st.header("Stress Level Distribution")
+    st.header("stress_level")
     st.bar_chart(data["stress_level"].value_counts())
 
-# -------------------------
-# 5. Visualizations
-# -------------------------
 elif menu == "Visualizations":
     st.header("Visualizations")
 
@@ -105,45 +83,33 @@ elif menu == "Visualizations":
         numeric_data = data.select_dtypes(include=['number'])
         corr = numeric_data.corr()
 
-        fig, ax = plt.subplots(figsize=(8, 6))
-        sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
-        st.pyplot(fig)
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(corr, annot=True, cmap="coolwarm")
+        st.pyplot()
 
     elif viz_type == "Line Chart":
-        st.subheader("Line Chart (All Numeric Features)")
         st.line_chart(data.drop("stress_level", axis=1))
 
     elif viz_type == "Bar Chart":
-        st.subheader("Bar Chart")
         feature = st.selectbox("Select feature:", data.columns[:-1])
         st.bar_chart(data[feature])
 
     elif viz_type == "Area Chart":
-        st.subheader("Area Chart (All Numeric Features)")
         st.area_chart(data.drop("stress_level", axis=1))
 
     elif viz_type == "Histogram":
-        st.subheader("Histogram")
         feature = st.selectbox("Select numeric feature:", data.columns[:-1])
-        fig, ax = plt.subplots()
-        ax.hist(data[feature], bins=20)
-        ax.set_xlabel(feature)
-        ax.set_ylabel("Frequency")
-        st.pyplot(fig)
+        plt.hist(data[feature], bins=20)
+        st.pyplot()
 
     elif viz_type == "Scatter Plot":
-        st.subheader("Scatter Plot")
         x_axis = st.selectbox("X-axis:", data.columns[:-1])
         y_axis = st.selectbox("Y-axis:", data.columns[:-1])
-        fig, ax = plt.subplots()
-        ax.scatter(data[x_axis], data[y_axis])
-        ax.set_xlabel(x_axis)
-        ax.set_ylabel(y_axis)
-        st.pyplot(fig)
+        plt.scatter(data[x_axis], data[y_axis])
+        plt.xlabel(x_axis)
+        plt.ylabel(y_axis)
+        st.pyplot()
 
-# -------------------------
-# 6. Model training summary
-# -------------------------
 elif menu == "Train Model Summary":
     st.header("Model Training Summary")
 
@@ -155,27 +121,20 @@ elif menu == "Train Model Summary":
         "Importance": feature_importances
     }).sort_values(by="Importance", ascending=False)
 
-    st.subheader("Feature Importances (Bar Chart)")
     st.bar_chart(importance_df.set_index("Feature"))
-
-    st.subheader("Feature Importances (Table)")
     st.dataframe(importance_df)
 
-# -------------------------
-# 7. Predict stress level
-# -------------------------
 elif menu == "Predict Stress Level":
     st.header("Predict Stress Level")
 
     age = st.slider('Age', 15, 60, 25)
     sleep_hours = st.slider('Sleep Hours', 4.0, 10.0, 7.0)
-    social_interaction = st.slider('Social Interaction (per week)', 0, 7, 3)
-    work_stress = st.slider('Work/Study Stress (1–10)', 1, 10, 5)
-    physical_activity = st.slider('Physical Activity (per week)', 0, 6, 2)
-    mood_score = st.slider('Mood Score (1–10)', 1, 10, 6)
+    social_interaction = st.slider('Social Interaction', 0, 7, 3)
+    work_stress = st.slider('Work/Study Stress', 1, 10, 5)
+    physical_activity = st.slider('Physical Activity', 0, 6, 2)
+    mood_score = st.slider('Mood Score', 1, 10, 6)
 
     if st.button("Predict"):
-        features = np.array([[age, sleep_hours, social_interaction,
-                              work_stress, physical_activity, mood_score]])
+        features = np.array([[age, sleep_hours, social_interaction, work_stress, physical_activity, mood_score]])
         prediction = model.predict(features)[0]
         st.success(f"Predicted Stress Level: {prediction}")
